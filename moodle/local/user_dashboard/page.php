@@ -26,4 +26,17 @@ echo html_writer::tag('p', get_string('email', 'local_user_dashboard', $user->em
 $settings->add(new admin_setting_heading('local_user_dashboard', '', 'User Dashboard'));
 $settings->add(new admin_setting_configtext('local_user_dashboard/url', get_string('pluginname', 'local_user_dashboard'), '', 'local/user_dashboard/page.php'));
 
+require_once('../../config.php'); // Путь к конфигурационному файлу Moodle
+require_once($CFG->dirroot . '/blocks/user_deadlines'); // Подключение вашего блока
+
+// Определение контекста
+$context = context_system::instance(); // Используйте нужный контекст
+
+// Создание экземпляра блока
+$blockinstance = new user_deadlines(); // Создание экземпляра вашего блока
+
+// Добавление блока
+$output = $PAGE->get_renderer('core');
+echo $output->block($blockinstance);
+
 echo $OUTPUT->footer();
