@@ -1,6 +1,6 @@
 <?php
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2023100100; // Версия плагина (год, месяц, день, номер).
-$plugin->requires  = 2022041900; // Версия Moodle.
-$plugin->component = 'block_my_dashboard'; // Уникальное имя плагина.
+$plugin->component = 'local_user_dashboard'; // Название плагина
+$plugin->version   = 2024010100; // Дата и версия (YYYYMMDDXX)
+$plugin->requires  = 2020110900; // Минимальная версия Moodle
