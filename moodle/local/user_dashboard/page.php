@@ -19,6 +19,9 @@ $user = $USER;
 echo $OUTPUT->header();
 echo html_writer::tag('h1', get_string('welcome', 'local_user_dashboard', $user->firstname));
 
+// Здесь можно добавить дополнительный контент личного кабинета
+echo html_writer::tag('p', get_string('email', 'local_user_dashboard', $user->email));
+
 // Пример кода для включения ссылки в меню
 $settings->add(new admin_setting_heading('local_user_dashboard', '', 'User Dashboard'));
 $settings->add(new admin_setting_configtext('local_user_dashboard/url', get_string('pluginname', 'local_user_dashboard'), '', 'local/user_dashboard/page.php'));
