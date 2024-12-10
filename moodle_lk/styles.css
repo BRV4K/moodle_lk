@@ -1,0 +1,11 @@
+.block_my_dashboard {
+    padding: 20px;
+    background-color: #f9f9f9;
+    border: 1px solid #ccc;
+}
+.block_my_dashboard h3 {
+    margin: 10px 0;
+}
+.block_my_dashboard p {
+    margin: 5px 0;
+}
