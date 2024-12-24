@@ -1,11 +1,37 @@
+/* Основной стиль блока */
 .block_my_dashboard {
     padding: 20px;
-    background-color: #f9f9f9;
-    border: 1px solid #ccc;
+    background-color: #e3e8ed; /* Светло-серый фон */
+    border: 1px solid #b0b9c3; /* Серо-синий бордер */
+    border-radius: 12px; /* Закругленные углы */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Легкая тень */
+    max-width: 600px; /* Ограничение ширины для лучшей пропорции */
+    margin: 20px auto; /* Центрирование блока */
 }
+
+/* Заголовки */
 .block_my_dashboard h3 {
-    margin: 10px 0;
+    color: #2a4d69; /* Темно-синий цвет текста */
+    font-size: 20px;
+    margin: 15px 0;
+    text-align: center; /* Центровка заголовка */
 }
+
+/* Текст */
 .block_my_dashboard p {
-    margin: 5px 0;
+    color: #506473; /* Сине-серый цвет текста */
+    margin: 10px 0;
+    line-height: 1.5; /* Увеличение межстрочного интервала */
+}
+
+/* Графики */
+.chart-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+    background: #f0f4f8; /* Нежный фон для графиков */
+    border-radius: 8px;
+    max-width: 100%;
+    height: auto;
 }
