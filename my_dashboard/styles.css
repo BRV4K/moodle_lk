@@ -1,0 +1,18 @@
+.block_my_dashboard {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.block_my_dashboard h3 {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+canvas {
+    display: block;
+    margin: 0 auto;
+}
