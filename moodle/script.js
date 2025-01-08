@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 document.addEventListener("DOMContentLoaded", function () {
     if (typeof Chart === 'undefined') {
         console.error('Chart.js не загружен.');
@@ -65,3 +66,26 @@ function toggleCourseInfo(button) {
         arrow.style.transform = "rotate(180deg)";
     }
 }
+=======
+document.addEventListener("DOMContentLoaded", function() {
+    // Инициализация графика
+    const ctx = document.getElementById("myChart").getContext("2d");
+    const myChart = new Chart(ctx, {
+        type: 'bar', // Тип графика
+        data: {
+            labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'],
+            datasets: [{
+                label: 'Прогресс',
+                data: [12, 19, 3, 5, 2, 3],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)', // Прозрачный синий
+                borderColor: 'rgba(54, 162, 235, 1)', // Синий
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true, // Адаптивность
+            maintainAspectRatio: false // Пропорциональность
+        }
+    });
+});
+>>>>>>> c836d222092c327bd8ff26c3f9499ba0bb2e1597
