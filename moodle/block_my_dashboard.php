@@ -2,7 +2,7 @@
 <?php
 /**
  * Файл block_my_dashboard.php
- * Отображение личного кабинета в Moodle
+ * Обновлённое разделение информации по курсам и времени
  */
 
 defined('MOODLE_INTERNAL') || die();
@@ -10,7 +10,7 @@ defined('MOODLE_INTERNAL') || die();
 class block_my_dashboard extends block_base {
 
     public function init() {
-        $this->title = 'Информация о курсах';
+        $this->title = 'Личный кабинет';
     }
 
     public function get_content() {
@@ -22,97 +22,205 @@ class block_my_dashboard extends block_base {
 
         $this->content = new stdClass();
         $userid = $USER->id;
+        $userfullname = fullname($USER);
 
         try {
-            // Получение данных о курсах
-            $courses = $DB->get_records_sql(
-                "SELECT c.id AS course_id, c.fullname AS course_name
-                 FROM {course} c
-                 JOIN {enrol} e ON e.courseid = c.id
-                 JOIN {user_enrolments} ue ON ue.enrolid = e.id
-                 WHERE ue.userid = ?",
-                [$userid]
-            );
+            // Основной блок контента
+            $this->content->text = '<div class="dashboard-wrapper">';
 
-            $this->content->text = '<div class="block_my_dashboard">';
+            // Карточка пользователя
+            $this->content->text .= '<div class="user-card">
+                <div></div>
+                <div>
+                    <h2>' . $userfullname . '</h2>
+                    <p>Email: ' . $USER->email . '</p>
+                </div>
+            </div>';
+
+            // Получение курсов пользователя
+            try {
+                $courses = $DB->get_records_sql(
+                    "SELECT c.id AS course_id, c.fullname AS course_name
+                     FROM {course} c
+                     JOIN {enrol} e ON e.courseid = c.id
+                     JOIN {user_enrolments} ue ON ue.enrolid = e.id
+                     WHERE ue.userid = ?",
+                    [$userid]
+                );
+            } catch (Exception $e) {
+                $this->content->text .= '<p>Не удалось загрузить курсы: ' . $e->getMessage() . '</p>';
+                return $this->content;
+            }
+
             foreach ($courses as $course) {
-                // Начало блока курса
-                $this->content->text .= '<div class="course-container" style="margin-bottom: 20px;">
-                    <h3 class="course-header" style="cursor: pointer;">' . $course->course_name . '</h3>
-                    <div class="course-content" style="padding: 15px; border: 1px solid #ddd; border-radius: 8px;">';
+                $this->content->text .= '<div class="course-block">';
+                $this->content->text .= '<h3>' . $course->course_name . '</h3>';
 
-                // Общая оценка курса (на основе тестов)
-                $course_grades = $DB->get_record_sql(
-                    "SELECT SUM(COALESCE(qa.sumgrades, 0)) AS user_grades, SUM(q.sumgrades) AS max_grades
-                     FROM {quiz} q
-                     LEFT JOIN {quiz_attempts} qa ON q.id = qa.quiz AND qa.userid = ?
-                     WHERE q.course = ? AND q.id IN (
-                         SELECT MAX(id) FROM {quiz} GROUP BY name
-                     )",
-                    [$userid, $course->course_id]
+                // Блок с дедлайнами и прогрессом
+                $this->content->text .= '<div class="course-details">';
+
+                try {
+                    // Дедлайны по курсу
+                    $deadlines = $DB->get_records_sql(
+                        "SELECT name, timestart
+                         FROM {event}
+                         WHERE timestart > UNIX_TIMESTAMP() AND courseid = ?
+                         ORDER BY timestart ASC
+                         LIMIT 4",
+                        [$course->course_id]
+                    );
+
+                    $this->content->text .= '<div class="card">
+                        <h4>Дедлайны</h4>';
+                    if ($deadlines) {
+                        $count = 0;
+                        foreach ($deadlines as $deadline) {
+                            if ($count < 3) {
+                                $this->content->text .= '<p>' . $deadline->name . ' - ' . userdate($deadline->timestart) . '</p>';
+                                $count++;
+                            } else {
+                                $this->content->text .= '<button class="view-all-deadlines">Посмотреть все дедлайны</button>';
+                                break;
+                            }
+                        }
+                    } else {
+                        $this->content->text .= '<p>Нет ближайших дедлайнов.</p>';
+                    }
+                    $this->content->text .= '</div>';
+                } catch (Exception $e) {
+                    $this->content->text .= '<p>Ошибка загрузки дедлайнов: ' . $e->getMessage() . '</p>';
+                }
+
+                try {
+                    // Прогресс по курсу
+                    $course_grades = $DB->get_record_sql(
+                        "SELECT SUM(q.sumgrades) AS max_grades,
+                                SUM(COALESCE(qa.sumgrades, 0)) AS user_grades
+                         FROM {quiz} q
+                         LEFT JOIN (
+                            SELECT qa.quiz, MAX(qa.id) AS last_attempt_id
+                            FROM {quiz_attempts} qa
+                            WHERE qa.userid = ?
+                            GROUP BY qa.quiz
+                         ) last_attempts ON q.id = last_attempts.quiz
+                         LEFT JOIN {quiz_attempts} qa ON qa.id = last_attempts.last_attempt_id
+                         WHERE q.course = ?
+                         AND q.id IN (
+                             SELECT MAX(q2.id)
+                             FROM {quiz} q2
+                             WHERE q2.course = ?
+                             GROUP BY q2.name
+                         );",
+                        [$userid, $course->course_id, $course->course_id]
+                    );
+
+                    $max_grades = $course_grades->max_grades ?? 0;
+                    $user_grades = $course_grades->user_grades ?? 0;
+
+                    $completion = ($max_grades > 0) ? round(($user_grades / $max_grades) * 100, 2) : 0;
+
+                    $this->content->text .= '<div class="card">
+                        <h4>Прогресс</h4>
+                        <canvas class="progress-chart" data-completion="' . $completion . '"></canvas>
+                    </div>';
+                } catch (Exception $e) {
+                    $this->content->text .= '<p>Ошибка загрузки прогресса: ' . $e->getMessage() . '</p>';
+                }
+
+                $this->content->text .= '</div>'; // Закрытие course-details
+
+                try {
+                    // Тесты по курсу
+                    $tests = $DB->get_records_sql(
+                        "SELECT q.name AS test_name, q.sumgrades AS max_grades,
+                                COALESCE(qa.sumgrades, 0) AS user_grades
+                         FROM {quiz} q
+                         LEFT JOIN (
+                            SELECT qa.quiz, MAX(qa.id) AS last_attempt_id
+                            FROM {quiz_attempts} qa
+                            WHERE qa.userid = ?
+                            GROUP BY qa.quiz
+                         ) last_attempts ON q.id = last_attempts.quiz
+                         LEFT JOIN {quiz_attempts} qa ON qa.id = last_attempts.last_attempt_id
+                         WHERE q.course = ?
+                         AND q.id IN (
+                             SELECT MAX(q2.id)
+                             FROM {quiz} q2
+                             WHERE q2.course = ?
+                             GROUP BY q2.name
+                         );",
+                        [$userid, $course->course_id, $course->course_id]
+                    );
+
+                    $testdata = [];
+                    foreach ($tests as $test) {
+                        $percentage = ($test->max_grades > 0) ? round(($test->user_grades / $test->max_grades) * 100, 2) : 0;
+                        $testdata[] = [
+                            'name' => $test->test_name,
+                            'percentage' => $percentage
+                        ];
+                    }
+
+                    $this->content->text .= '<div class="card">
+                        <h4>Тесты</h4>
+                        <canvas class="grades-chart" data-grades="' . htmlspecialchars(json_encode($testdata), ENT_QUOTES, 'UTF-8') . '"></canvas>
+                    </div>';
+                } catch (Exception $e) {
+                    $this->content->text .= '<p>Ошибка загрузки тестов: ' . $e->getMessage() . '</p>';
+                }
+
+                $this->content->text .= '</div>'; // Закрытие course-block
+            }
+
+            try {
+                // Время на платформе
+                $time_data = $DB->get_records_sql(
+                    "SELECT
+                        FROM_UNIXTIME(timecreated, '%Y-%m-%d') AS activity_date,
+                        COUNT(*) AS activity_count
+                     FROM {logstore_standard_log}
+                     WHERE userid = ?
+                     GROUP BY FROM_UNIXTIME(timecreated, '%Y-%m-%d')
+                     ORDER BY activity_date;",
+                    [$userid]
                 );
 
-                $completion = ($course_grades->max_grades > 0) ? round(($course_grades->user_grades / $course_grades->max_grades) * 100, 2) : 0;
-                $this->content->text .= '<div style="text-align: center; margin-bottom: 20px;">
-                    <canvas class="progress-chart" data-completion="' . $completion . '" style="max-width: 200px;"></canvas>
-                </div>';
-
-                // Прогресс тестов для курса
-                $tests = $DB->get_records_sql(
-                    "SELECT q.name AS test_name, q.sumgrades AS max_grades,
-                            COALESCE(MAX(qa.sumgrades), 0) AS user_grades
-                     FROM {quiz} q
-                     LEFT JOIN {quiz_attempts} qa ON q.id = qa.quiz AND qa.userid = ?
-                     WHERE q.course = ? AND q.id IN (
-                         SELECT MAX(id) FROM {quiz} GROUP BY name
-                     )
-                     GROUP BY q.id, q.name, q.sumgrades",
-                    [$userid, $course->course_id]
-                );
-
-                $testdata = [];
-                foreach ($tests as $test) {
-                    $percentage = ($test->max_grades > 0) ? round(($test->user_grades / $test->max_grades) * 100, 2) : 0;
-                    $testdata[] = [
-                        'name' => $test->test_name,
-                        'percentage' => $percentage
+                $activity_data = [];
+                foreach ($time_data as $row) {
+                    $activity_data[] = [
+                        'date' => $row->activity_date,
+                        'count' => $row->activity_count,
+                        'minutes' => $row->activity_count
                     ];
                 }
-                $this->content->text .= '<div style="text-align: center; margin-bottom: 20px;">
-                    <canvas class="grades-chart" data-grades=\'' . htmlspecialchars(json_encode($testdata), ENT_QUOTES, 'UTF-8') . '\' style="max-width: 400px; height: 200px;"></canvas>
+
+                $this->content->text .= '<div class="card">
+                    <h3>Активность по дням</h3>
+                    <canvas class="activity-chart" data-activity="' . htmlspecialchars(json_encode($activity_data), ENT_QUOTES, 'UTF-8') . '"></canvas>
                 </div>';
 
-                // Получение дедлайнов для курса
-                $deadlines = $DB->get_records_sql(
-                    "SELECT id, name, timestart, eventtype
-                     FROM {event}
-                     WHERE timestart > UNIX_TIMESTAMP() AND courseid = ?
-                     ORDER BY timestart ASC",
-                    [$course->course_id]
-                );
+                $active_days = count($activity_data);
 
-                if ($deadlines) {
-                    $nearest_deadline = reset($deadlines);
-                    $this->content->text .= '<p>Ближайший дедлайн: ' . $nearest_deadline->name . ' (' . userdate($nearest_deadline->timestart) . ')</p>';
+                $this->content->text .= '<div class="time-details" style="display: flex; gap: 20px;">';
 
-                    // Кнопка для раскрытия всех дедлайнов
-                    $this->content->text .= '<button onclick="toggleDeadlines(this)" style="cursor: pointer;">Показать все дедлайны</button>';
-                    $this->content->text .= '<ul class="deadlines-list" style="display: none;">';
-                    foreach ($deadlines as $deadline) {
-                        $type_label = ($deadline->eventtype === 'open') ? 'Открытие' : 'Закрытие';
-                        $this->content->text .= '<li>' . $type_label . ': ' . $deadline->name . ' (' . userdate($deadline->timestart) . ')</li>';
-                    }
-                    $this->content->text .= '</ul>';
-                } else {
-                    $this->content->text .= '<p>Нет ближайших дедлайнов.</p>';
-                }
+                $this->content->text .= '<div class="card" style="flex: 1;">
+                    <h3>Активные дни</h3>
+                    <p>' . $active_days . '</p>
+                </div>';
 
-                $this->content->text .= '</div>'; // Закрытие course-content
-                $this->content->text .= '</div>'; // Закрытие course-container
+                $this->content->text .= '<div class="card" style="flex: 1;">
+                    <h3>Всего часов за месяц</h3>
+                    <p>' . round(array_sum(array_column($activity_data, 'minutes')) / 60, 2) . ' часов</p>
+                </div>';
+
+                $this->content->text .= '</div>'; // Закрытие time-details
+            } catch (Exception $e) {
+                $this->content->text .= '<p>Ошибка загрузки данных времени: ' . $e->getMessage() . '</p>';
             }
-            $this->content->text .= '</div>'; // Закрытие block_my_dashboard
+
+            $this->content->text .= '</div>'; // Закрытие dashboard-wrapper
         } catch (Exception $e) {
-            $this->content->text = '<p>Произошла ошибка. Обратитесь к администратору.</p>';
+            $this->content->text = '<p>Произошла ошибка: ' . $e->getMessage() . '</p>';
         }
 
         // Подключение скриптов и стилей

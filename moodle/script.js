@@ -1,4 +1,14 @@
 document.addEventListener("DOMContentLoaded", function () {
+    //Функция скрытия/открытия информации о курсе
+    document.querySelectorAll('.toggle-course').forEach(button => {
+        button.addEventListener('click', function () {
+            const courseDetails = this.closest('.course-block').querySelector('.course-details');
+            const isVisible = courseDetails.style.display === 'block';
+
+            courseDetails.style.display = isVisible ? 'none' : 'block';
+            this.textContent = isVisible ? '▼' : '▲';
+        });
+    });
     // Инициализация круговых диаграмм
     const progressCharts = document.querySelectorAll(".progress-chart");
     progressCharts.forEach((chart) => {
@@ -9,7 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 datasets: [
                     {
                         data: [completion, 100 - completion],
-                        backgroundColor: ["#2a72d4", "#e0e0e0"],
+                        backgroundColor: ["#4caf50", "#e0e0e0"],
                     },
                 ],
             },
@@ -33,7 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     {
                         label: "Процент выполнения",
                         data: gradesData.map((g) => g.percentage),
-                        backgroundColor: "#2a72d4",
+                        backgroundColor: "#4caf50",
                     },
                 ],
             },
@@ -48,21 +58,37 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 
-    // Функция для сворачивания/разворачивания курса
-    window.toggleCourseBlock = function (header) {
-        const container = header.nextElementSibling;
-        const arrow = header.querySelector(".arrow");
-        const isHidden = getComputedStyle(container).display === "none";
-        container.style.display = isHidden ? "block" : "none";
-        arrow.textContent = isHidden ? "▲" : "▼";
-    };
+    // Инициализация графиков активности по дням
+    const activityCharts = document.querySelectorAll(".activity-chart");
+    activityCharts.forEach((chart) => {
+        const activityData = JSON.parse(chart.getAttribute("data-activity") || "[]");
 
-    // Функция для сворачивания/разворачивания дедлайнов
-    window.toggleDeadlines = function (button) {
-        const deadlinesList = button.nextElementSibling;
-        const arrow = button.querySelector(".arrow");
-        const isHidden = getComputedStyle(deadlinesList).display === "none";
-        deadlinesList.style.display = isHidden ? "block" : "none";
-        button.innerHTML = isHidden ? "Скрыть все дедлайны <span class='arrow'>▲</span>" : "Показать все дедлайны <span class='arrow'>▼</span>";
-    };
+        // Проверка данных для обработки
+        const labels = activityData.map((entry) => entry.date);
+        const dataPoints = activityData.map((entry) => entry.minutes);
+
+        new Chart(chart, {
+            type: "line",
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: "Активность (минуты)",
+                        data: dataPoints,
+                        borderColor: "#4caf50",
+                        backgroundColor: "rgba(76, 175, 80, 0.2)",
+                        fill: true,
+                    },
+                ],
+            },
+            options: {
+                plugins: {
+                    legend: { display: true },
+                },
+                scales: {
+                    y: { beginAtZero: true },
+                },
+            },
+        });
+    });
 });
