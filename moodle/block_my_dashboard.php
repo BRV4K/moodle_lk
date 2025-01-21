@@ -56,6 +56,8 @@ class block_my_dashboard extends block_base {
                 $this->content->text .= '<div class="course-block">';
                 $this->content->text .= '<h3>' . $course->course_name . '</h3>';
 
+                //Блок со всеми графиками
+                $this->content->text .= '<div class="course-info">';
                 // Блок с дедлайнами и прогрессом
                 $this->content->text .= '<div class="course-details">';
 
@@ -169,6 +171,7 @@ class block_my_dashboard extends block_base {
                     $this->content->text .= '<p>Ошибка загрузки тестов: ' . $e->getMessage() . '</p>';
                 }
 
+                $this->content->text .= '</div>'; // Закрытие course-info
                 $this->content->text .= '</div>'; // Закрытие course-block
             }
 
