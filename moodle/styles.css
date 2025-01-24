@@ -43,10 +43,11 @@
 }
 
 .course-details {
-    margin-top: 10px;
-    padding: 10px;
     border-radius: 5px;
     background-color: #fff;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
 .course-details .card {
@@ -133,3 +134,62 @@ p {
 .course-info {
 
 }
+
+.deadlines-container {
+    max-height: 150px;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.deadlines-container.show-all {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.show-all-deadlines, .hide-all-deadlines {
+    display: none;
+    margin-top: 10px;
+    background-color: #4caf50;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.show-all-deadlines {
+    display: block;
+}
+
+.hidden-deadline {
+    display: none;
+}
+
+
+.view-all-deadlines {
+    background-color: #3371CE;
+    color: #FFFFFF;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 10px 10px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.view-all-deadlines:hover {
+    background-color: #E9F2FF;
+    color: #3371CE;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.view-all-deadlines:active {
+    background-color: #265A9F;
+    color: #FFFFFF;
+    transform: scale(0.98);
+}
+
+

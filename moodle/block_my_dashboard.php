@@ -61,37 +61,43 @@ class block_my_dashboard extends block_base {
                 // Блок с дедлайнами и прогрессом
                 $this->content->text .= '<div class="course-details">';
 
-                try {
-                    // Дедлайны по курсу
-                    $deadlines = $DB->get_records_sql(
-                        "SELECT name, timestart
-                         FROM {event}
-                         WHERE timestart > UNIX_TIMESTAMP() AND courseid = ?
-                         ORDER BY timestart ASC
-                         LIMIT 4",
-                        [$course->course_id]
-                    );
+               try {
+                   // Дедлайны по курсу
+                   $deadlines = $DB->get_records_sql(
+                       "SELECT name, timestart
+                        FROM {event}
+                        WHERE timestart > UNIX_TIMESTAMP() AND courseid = ?
+                        ORDER BY timestart ASC",
+                       [$course->course_id]
+                   );
 
-                    $this->content->text .= '<div class="card">
-                        <h4>Дедлайны</h4>';
-                    if ($deadlines) {
-                        $count = 0;
-                        foreach ($deadlines as $deadline) {
-                            if ($count < 3) {
-                                $this->content->text .= '<p>' . $deadline->name . ' - ' . userdate($deadline->timestart) . '</p>';
-                                $count++;
-                            } else {
-                                $this->content->text .= '<button class="view-all-deadlines">Посмотреть все дедлайны</button>';
-                                break;
-                            }
-                        }
-                    } else {
-                        $this->content->text .= '<p>Нет ближайших дедлайнов.</p>';
-                    }
-                    $this->content->text .= '</div>';
-                } catch (Exception $e) {
-                    $this->content->text .= '<p>Ошибка загрузки дедлайнов: ' . $e->getMessage() . '</p>';
-                }
+                   $this->content->text .= '<div class="card">
+                       <h4>Дедлайны</h4>';
+
+                   if ($deadlines) {
+                       $count = 0;
+                       $this->content->text .= '<div class="deadlines-container">';
+
+                       foreach ($deadlines as $deadline) {
+                           $this->content->text .= '<p class="deadline-item' . ($count >= 3 ? ' hidden-deadline' : '') . '">' .
+                               $deadline->name . ' - ' . userdate($deadline->timestart) . '</p>';
+                           $count++;
+                       }
+
+                       $this->content->text .= '</div>';
+
+                       if ($count > 3) {
+                           $this->content->text .= '<button class="view-all-deadlines">Показать все дедлайны</button>';
+                       }
+                   } else {
+                       $this->content->text .= '<p>Нет ближайших дедлайнов.</p>';
+                   }
+
+                   $this->content->text .= '</div>';
+               } catch (Exception $e) {
+                   $this->content->text .= '<p>Ошибка загрузки дедлайнов: ' . $e->getMessage() . '</p>';
+               }
+
 
                 try {
                     // Прогресс по курсу
@@ -99,22 +105,27 @@ class block_my_dashboard extends block_base {
                         "SELECT SUM(q.sumgrades) AS max_grades,
                                 SUM(COALESCE(qa.sumgrades, 0)) AS user_grades
                          FROM {quiz} q
+                         JOIN {course_modules} cm ON cm.instance = q.id
+                         JOIN {modules} m ON m.id = cm.module
                          LEFT JOIN (
-                            SELECT qa.quiz, MAX(qa.id) AS last_attempt_id
-                            FROM {quiz_attempts} qa
-                            WHERE qa.userid = ?
-                            GROUP BY qa.quiz
+                             SELECT qa.quiz, MAX(qa.id) AS last_attempt_id
+                             FROM {quiz_attempts} qa
+                             WHERE qa.userid = ?
+                             GROUP BY qa.quiz
                          ) last_attempts ON q.id = last_attempts.quiz
                          LEFT JOIN {quiz_attempts} qa ON qa.id = last_attempts.last_attempt_id
                          WHERE q.course = ?
-                         AND q.id IN (
-                             SELECT MAX(q2.id)
-                             FROM {quiz} q2
-                             WHERE q2.course = ?
-                             GROUP BY q2.name
-                         );",
+                           AND q.id IN (
+                               SELECT MAX(q2.id)
+                               FROM {quiz} q2
+                               WHERE q2.course = ?
+                               GROUP BY q2.name
+                           )
+                           AND cm.visible = 1
+                           AND m.name = 'quiz';",
                         [$userid, $course->course_id, $course->course_id]
                     );
+
 
                     $max_grades = $course_grades->max_grades ?? 0;
                     $user_grades = $course_grades->user_grades ?? 0;
@@ -134,25 +145,31 @@ class block_my_dashboard extends block_base {
                 try {
                     // Тесты по курсу
                     $tests = $DB->get_records_sql(
-                        "SELECT q.name AS test_name, q.sumgrades AS max_grades,
+                        "SELECT q.name AS test_name,
+                                q.sumgrades AS max_grades,
                                 COALESCE(qa.sumgrades, 0) AS user_grades
                          FROM {quiz} q
+                         JOIN {course_modules} cm ON cm.instance = q.id
+                         JOIN {modules} m ON m.id = cm.module
                          LEFT JOIN (
-                            SELECT qa.quiz, MAX(qa.id) AS last_attempt_id
-                            FROM {quiz_attempts} qa
-                            WHERE qa.userid = ?
-                            GROUP BY qa.quiz
+                             SELECT qa.quiz, MAX(qa.id) AS last_attempt_id
+                             FROM {quiz_attempts} qa
+                             WHERE qa.userid = ?
+                             GROUP BY qa.quiz
                          ) last_attempts ON q.id = last_attempts.quiz
                          LEFT JOIN {quiz_attempts} qa ON qa.id = last_attempts.last_attempt_id
                          WHERE q.course = ?
-                         AND q.id IN (
-                             SELECT MAX(q2.id)
-                             FROM {quiz} q2
-                             WHERE q2.course = ?
-                             GROUP BY q2.name
-                         );",
+                           AND q.id IN (
+                               SELECT MAX(q2.id)
+                               FROM {quiz} q2
+                               WHERE q2.course = ?
+                               GROUP BY q2.name
+                           )
+                           AND cm.visible = 1
+                           AND m.name = 'quiz';",
                         [$userid, $course->course_id, $course->course_id]
                     );
+
 
                     $testdata = [];
                     foreach ($tests as $test) {

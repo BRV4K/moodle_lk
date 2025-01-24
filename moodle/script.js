@@ -1,14 +1,15 @@
 document.addEventListener("DOMContentLoaded", function () {
-    //Функция скрытия/открытия информации о курсе
-    document.querySelectorAll('.toggle-course').forEach(button => {
-        button.addEventListener('click', function () {
-            const courseDetails = this.closest('.course-block').querySelector('.course-details');
-            const isVisible = courseDetails.style.display === 'block';
+    // Логика для кнопки "Показать все дедлайны"
+    const viewAllButton = document.querySelector('.view-all-deadlines');
+    const hiddenDeadlines = document.querySelectorAll('.hidden-deadline');
 
-            courseDetails.style.display = isVisible ? 'none' : 'block';
-            this.textContent = isVisible ? '▼' : '▲';
+    if (viewAllButton && hiddenDeadlines) {
+        viewAllButton.addEventListener('click', function () {
+            hiddenDeadlines.forEach(item => item.classList.remove('hidden-deadline'));
+            viewAllButton.style.display = 'none'; // Скрываем кнопку после раскрытия
         });
-    });
+    }
+
     // Инициализация круговых диаграмм
     const progressCharts = document.querySelectorAll(".progress-chart");
     progressCharts.forEach((chart) => {
@@ -19,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 datasets: [
                     {
                         data: [completion, 100 - completion],
-                        backgroundColor: ["#4caf50", "#e0e0e0"],
+                        backgroundColor: ["#3371CE", "#E9F2FF"],
                     },
                 ],
             },
@@ -43,7 +44,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     {
                         label: "Процент выполнения",
                         data: gradesData.map((g) => g.percentage),
-                        backgroundColor: "#4caf50",
+                        backgroundColor: "#3371CE",
                     },
                 ],
             },
@@ -75,8 +76,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     {
                         label: "Активность (минуты)",
                         data: dataPoints,
-                        borderColor: "#4caf50",
-                        backgroundColor: "rgba(76, 175, 80, 0.2)",
+                        borderColor: "#3371CE",
+                        backgroundColor: "#E9F2FF",
                         fill: true,
                     },
                 ],
